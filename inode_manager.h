@@ -4,7 +4,8 @@
 #define inode_h
 
 #include <stdint.h>
-#include "extent_protocol.h" // TODO: delete it
+#include "extent_protocol.h"
+#include <map>
 
 #define DISK_SIZE  1024*1024*16
 #define BLOCK_SIZE 512
@@ -51,8 +52,8 @@ class block_manager {
 #define INODE_NUM  1024
 
 // Inodes per block.
-#define IPB           1
-//(BLOCK_SIZE / sizeof(struct inode))
+#define IPB  (BLOCK_SIZE / sizeof(struct inode)) // 1
+
 
 // Block containing inode i
 #define IBLOCK(i, nblocks)     ((nblocks)/BPB + (i)/IPB + 3)
@@ -73,7 +74,9 @@ typedef struct inode {
   unsigned int atime;
   unsigned int mtime;
   unsigned int ctime;
-  blockid_t blocks[NDIRECT+1];   // Data block addresses
+  unsigned int bnum;
+  blockid_t blocks[NDIRECT];   // Data block addresses
+  blockid_t indirblock;
 } inode_t;
 
 class inode_manager {
@@ -90,6 +93,9 @@ class inode_manager {
   void write_file(uint32_t inum, const char *buf, int size);
   void remove_file(uint32_t inum);
   void getattr(uint32_t inum, extent_protocol::attr &a);
+
+  blockid_t getblockid(inode *ino, int index);
+  void setblockid(inode *ino, int index, blockid_t val);
 };
 
 #endif

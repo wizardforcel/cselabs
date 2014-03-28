@@ -1,6 +1,7 @@
 // yfs client.  implements FS operations using extent and lock server
 #include "yfs_client.h"
 #include "extent_client.h"
+//#include "extent_protocol.h"
 #include <sstream>
 #include <iostream>
 #include <stdio.h>
@@ -8,6 +9,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+using namespace std;
 
 yfs_client::yfs_client()
 {
@@ -18,7 +20,7 @@ yfs_client::yfs_client()
 yfs_client::yfs_client(std::string extent_dst, std::string lock_dst)
 {
     ec = new extent_client();
-    if (ec->put(1, "") != extent_protocol::OK)
+    if (ec->put(1, "") != OK)
         printf("error init root dir\n"); // XYB: init root dir
 }
 
@@ -44,7 +46,7 @@ yfs_client::isfile(inum inum)
 {
     extent_protocol::attr a;
 
-    if (ec->getattr(inum, a) != extent_protocol::OK) {
+    if (ec->getattr(inum, a) != OK) {
         printf("error getting attr\n");
         return false;
     }
@@ -53,7 +55,7 @@ yfs_client::isfile(inum inum)
         printf("isfile: %lld is a file\n", inum);
         return true;
     } 
-    printf("isfile: %lld is a dir\n", inum);
+    //printf("isfile: %lld is a dir\n", inum);
     return false;
 }
 /** Your code here for Lab...
@@ -65,8 +67,37 @@ yfs_client::isfile(inum inum)
 bool
 yfs_client::isdir(inum inum)
 {
-    // Oops! is this still correct when you implement symlink?
-    return ! isfile(inum);
+    extent_protocol::attr a;
+
+    if (ec->getattr(inum, a) != OK) {
+        printf("error getting attr\n");
+        return false;
+    }
+
+    if (a.type == extent_protocol::T_DIR) {
+        printf("isfile: %lld is a dir\n", inum);
+        return true;
+    } 
+    //printf("isfile: %lld is a dir\n", inum);
+    return false;
+}
+
+bool
+yfs_client::islink(inum inum)
+{
+    extent_protocol::attr a;
+
+    if (ec->getattr(inum, a) != OK) {
+        printf("error getting attr\n");
+        return false;
+    }
+
+    if (a.type == extent_protocol::T_SLINK) {
+        printf("isfile: %lld is a symlink\n", inum);
+        return true;
+    } 
+    //printf("isfile: %lld is a dir\n", inum);
+    return false;
 }
 
 int
@@ -76,7 +107,7 @@ yfs_client::getfile(inum inum, fileinfo &fin)
 
     printf("getfile %016llx\n", inum);
     extent_protocol::attr a;
-    if (ec->getattr(inum, a) != extent_protocol::OK) {
+    if (ec->getattr(inum, a) != OK) {
         r = IOERR;
         goto release;
     }
@@ -98,15 +129,16 @@ yfs_client::getdir(inum inum, dirinfo &din)
 
     printf("getdir %016llx\n", inum);
     extent_protocol::attr a;
-    if (ec->getattr(inum, a) != extent_protocol::OK) {
+    if (ec->getattr(inum, a) != OK)
+    {
         r = IOERR;
-        goto release;
     }
-    din.atime = a.atime;
-    din.mtime = a.mtime;
-    din.ctime = a.ctime;
-
-release:
+    else
+    {
+      din.atime = a.atime;
+      din.mtime = a.mtime;
+      din.ctime = a.ctime;
+    }
     return r;
 }
 
@@ -123,13 +155,45 @@ release:
 int
 yfs_client::setattr(inum ino, size_t size)
 {
-    int r = OK;
+    string buf;
 
-    /*
-     * your lab2 code goes here.
-     * note: get the content of inode ino, and modify its content
-     * according to the size (<, =, or >) content length.
-     */
+    if(ec->get(ino, buf) != OK)
+      return IOERR;
+
+    buf.resize(size, 0);
+
+    if(ec->put(ino, buf) != OK)
+      return IOERR;
+
+    return OK;
+}
+
+int 
+yfs_client::_create(inum parent, const char *name, 
+                    mode_t mode, inum &ino_out, extent_protocol::types type)
+{
+    int r;
+    string pbuf;
+    string fbuf;
+
+    r = ec->get(parent, pbuf);
+    if(r != OK) return r;
+
+    map<string, inum> list = split(pbuf);
+    map<string, inum>::iterator it
+      = list.find(name);
+    if(it != list.end()) return EXIST;
+
+    r = ec->create(type, ino_out);
+    if(r != OK) return r;
+
+    //if(is_dir)
+    //  fbuf = "/" + string(name) + "/" + filename(ino_out);
+    r = ec->put(ino_out, fbuf);    
+    if(r != OK) return r;
+
+    pbuf.append("/" + string(name) + "/" + filename(ino_out));
+    r = ec->put(parent, pbuf);
 
     return r;
 }
@@ -137,97 +201,181 @@ yfs_client::setattr(inum ino, size_t size)
 int
 yfs_client::create(inum parent, const char *name, mode_t mode, inum &ino_out)
 {
-    int r = OK;
-
-    /*
-     * your lab2 code goes here.
-     * note: lookup is what you need to check if file exist;
-     * after create file or dir, you must remember to modify the parent infomation.
-     */
-
-    return r;
+    return _create(parent, name, mode, ino_out, extent_protocol::T_FILE);
 }
 
 int
 yfs_client::mkdir(inum parent, const char *name, mode_t mode, inum &ino_out)
 {
-    int r = OK;
+    string sname = name;
+    if(sname == "." || sname == "..")
+      return IOERR;
 
-    /*
-     * your lab2 code goes here.
-     * note: lookup is what you need to check if directory exist;
-     * after create file or dir, you must remember to modify the parent infomation.
-     */
+    return _create(parent, name, mode, ino_out, extent_protocol::T_DIR);
+}
 
-    return r;
+map<string, uint64_t> yfs_client::split(string src)
+{
+    //format: /name/ino/name/ino ...
+    map<string, uint64_t> res;
+    int left = src.find('/', 0);
+    if(left == -1) return res;
+    left += 1;
+    int right = 0;
+    while(true)
+    {
+      right = src.find('/', left);
+      if(right == -1) break;
+      string tmp_name = src.substr(left, right - left);
+      left = right + 1;
+      
+      right = src.find('/', left);
+      if(right == -1) //last one
+      {
+        right = src.size();
+        string tmp_inostr = src.substr(left, right - left);
+        inum tmp_ino = n2i(tmp_inostr);
+        res[tmp_name] = tmp_ino;
+        break;
+      }
+      string tmp_inostr = src.substr(left, right - left);
+      inum tmp_ino = n2i(tmp_inostr);
+      res[tmp_name] = tmp_ino;
+      left = right + 1;
+    }
+    return res;
 }
 
 int
 yfs_client::lookup(inum parent, const char *name, bool &found, inum &ino_out)
 {
-    int r = OK;
+    string pbuf;
+    if(ec->get(parent, pbuf) != OK)
+    {
+      found = false;
+      return NOENT;
+    }
 
-    /*
-     * your lab2 code goes here.
-     * note: lookup file from parent dir according to name;
-     * you should design the format of directory content.
-     */
+    map<string, inum> res = split(pbuf);
 
-    return r;
+    map<string, inum>::iterator it 
+      = res.find(name);
+    if(it == res.end())
+    {
+      found = false;
+      return NOENT;
+    }
+
+    ino_out = it->second;
+    found = true;
+    return OK;
 }
 
 int
 yfs_client::readdir(inum dir, std::list<dirent> &list)
 {
-    int r = OK;
+    string pbuf;
+    list.clear();
+    if(ec->get(dir, pbuf) != OK)
+      return NOENT;
 
-    /*
-     * your lab2 code goes here.
-     * note: you should parse the dirctory content using your defined format,
-     * and push the dirents to the list.
-     */
+    map<string, inum> res = split(pbuf);
 
-    return r;
+    for(map<string, inum>::iterator it = res.begin();
+        it != res.end(); ++it)
+    {
+      dirent tmp = {it->first, it->second};
+      list.push_back(tmp);
+    }
+
+    return OK;
 }
 
 int
 yfs_client::read(inum ino, size_t size, off_t off, std::string &data)
 {
-    int r = OK;
+    string fbuf;
+    if(ec->get(ino, fbuf) != OK) return IOERR;
 
-    /*
-     * your lab2 code goes here.
-     * note: read using ec->get().
-     */
+    if((size_t)off >= fbuf.size())
+    {
+      data = "";
+      return OK;
+    }
 
-    return r;
+    data = fbuf.substr(off, size);
+    return OK;
 }
 
 int
 yfs_client::write(inum ino, size_t size, off_t off, const char *data,
         size_t &bytes_written)
 {
-    int r = OK;
+    string fbuf;
+    if(ec->get(ino, fbuf) != OK) return IOERR;
 
-    /*
-     * your lab2 code goes here.
-     * note: write using ec->put().
-     * when off > length of original file, fill the holes with '\0'.
-     */
-
-    return r;
+    if(off + size > fbuf.size())
+      fbuf.resize(off + size, 0);
+    
+    for(uint32_t i = 0; i < size; i++)
+    {
+      fbuf[off + i] = data[i];
+    }
+    
+    if(ec->put(ino, fbuf) != OK) return IOERR;
+    bytes_written = size;
+    return OK;
 }
 
 int yfs_client::unlink(inum parent,const char *name)
 {
-    int r = OK;
+    string pbuf;
+    string sname = name;
+    if(sname == "." || sname == "..")
+      return IOERR;
+    if(ec->get(parent, pbuf) != OK)
+      return NOENT;
+    
+    map<string, inum> res = split(pbuf);
+    map<string, inum>::iterator it
+      = res.find(name);
+    if(it == res.end())
+      return NOENT;
 
-    /*
-     * your lab2 code goes here.
-     * note: you should remove the file using ec->remove,
-     * and update the parent directory content.
-     */
+    dirent d = {it->first, it->second};
+    res.erase(it);
+    pbuf = "";
+    for(it = res.begin(); it != res.end(); ++it)
+    {
+      pbuf += "/" + it->first + "/" + filename(it->second);
+    }
+    if(ec->put(parent, pbuf) != OK)
+      return IOERR;
 
-    return r;
+    if(ec->remove(d.inum) != OK)
+      return IOERR;
+
+    return OK;
 }
+
+int yfs_client::symlink(inum parent, const char *name, const char *link, inum &ino_out)
+{
+  string pbuf;  
+  if(ec->get(parent, pbuf) != OK)
+    return NOENT;
+
+  int r = _create(parent, name, 0, ino_out, extent_protocol::T_SLINK);
+  if(r != OK) return r;
+
+  r = ec->put(ino_out, link);
+
+  return r;
+}
+
+int yfs_client::readlink(inum ino, string &link)
+{
+  int r = ec->get(ino, link);
+  return r;
+}
+
 

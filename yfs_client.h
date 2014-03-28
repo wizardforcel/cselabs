@@ -5,7 +5,10 @@
 //#include "yfs_protocol.h"
 #include "extent_client.h"
 #include <vector>
-
+#include <map>
+using std::string;
+using std::map;
+using std::vector;
 
 class yfs_client {
   extent_client *ec;
@@ -35,12 +38,17 @@ class yfs_client {
   static std::string filename(inum);
   static inum n2i(std::string);
 
+  int _create(inum, const char *, mode_t, inum &, extent_protocol::types);
+  map<string, uint64_t> split(string);
+  
+
  public:
   yfs_client();
   yfs_client(std::string, std::string);
 
   bool isfile(inum);
   bool isdir(inum);
+  bool islink(inum);
 
   int getfile(inum, fileinfo &);
   int getdir(inum, dirinfo &);
@@ -53,6 +61,8 @@ class yfs_client {
   int read(inum, size_t, off_t, std::string &);
   int unlink(inum,const char *);
   int mkdir(inum , const char *, mode_t , inum &);
+  int symlink(inum, const char *, const char *, inum &);
+  int readlink(inum, string &);
   
   /** you may need to add symbolic link related methods here.*/
 };
