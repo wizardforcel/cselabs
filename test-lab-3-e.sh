@@ -6,7 +6,7 @@
 ###########################################
 
 DIR=$1
-SUFFIX=${DIR}
+SUFFIX=$(echo $DIR | grep -o -P 'yfs\d' | head)
 TEST_FILE1=foo.txt.${SUFFIX}
 TEST_FILE2=${DIR}/foo.txt.${SUFFIX}
 SRCFILE=tmprand
