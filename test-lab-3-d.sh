@@ -16,11 +16,11 @@ diff ${ORIG_FILE} $DIR/hosts >/dev/null 2>&1
 if [ $? -ne 0 ];
 then
     echo "failed SYMLINK test"
-    exit
+    #exit
 fi
 
 cp ${ORIG_FILE} $DIR/hosts_copy
-ln -s $DIR/hosts_copy $DIR/testhostslink
+ln -s hosts_copy $DIR/testhostslink
 diff $DIR/testhostslink $DIR/hosts_copy >/dev/null 2>&1
 if [ $? -ne 0 ];
 then

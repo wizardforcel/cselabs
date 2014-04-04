@@ -19,6 +19,7 @@ test_if_has_mount(){
 			echo "FATAL: Your YFS client has failed to mount its filesystem!"
 			exit
 	fi;
+
 	yfs_count=$(ps -e | grep -o "yfs_client" | wc -l)
 	extent_count=$(ps -e | grep -o "extent_server" | wc -l)
 	
@@ -39,7 +40,9 @@ test_if_has_mount
 ##################################################
 
 # run test 1
+
 ./test-lab-3-a.pl yfs1 | grep -q "Passed all"
+
 if [ $? -ne 0 ];
 then
         echo "Failed test-A"
@@ -63,6 +66,7 @@ test_if_has_mount
 ##################################################
 
 ./test-lab-3-b.pl yfs1 | grep -q "Passed all"
+
 if [ $? -ne 0 ];
 then
         echo "Failed test-B"
@@ -86,6 +90,7 @@ test_if_has_mount
 ##################################################
 
 ./test-lab-3-c.pl yfs1 | grep -q "Passed all"
+
 if [ $? -ne 0 ];
 then
         echo "Failed test-c"
@@ -108,12 +113,12 @@ test_if_has_mount
 
 ##################################################
 
-
 ./test-lab-3-d.sh yfs1 >tmp.1
 ./test-lab-3-d.sh yfs2 >tmp.2
 lcnt=$(cat tmp.1 tmp.2 | grep -o "Passed SYMLINK" | wc -l)
 
 if [ $lcnt -ne 2 ];
+
 then
         echo "Failed test-d"
         #exit
@@ -142,6 +147,7 @@ rm tmp.1 tmp.2
 lcnt=$(cat tmp.1 tmp.2 | grep -o "Passed BLOB" | wc -l)
 
 if [ $lcnt -ne 2 ];
+
 then
         echo "Failed test-e"
 else
@@ -164,6 +170,7 @@ rm tmp.1 tmp.2
 ##################################################################################
 robust(){
 ./test-lab-3-f.sh yfs1 | grep -q "Passed ROBUSTNESS test"
+
 if [ $? -ne 0 ];
 then
         echo "Failed test-f"
@@ -183,7 +190,6 @@ fi
 
 test_if_has_mount
 }
-
 
 
 ##################################################################################
@@ -207,16 +213,16 @@ else
 fi
 }
 
-lab3
-
 # finally reaches here!
 #echo "Passed all tests!"
 
 ./stop.sh
 echo ""
+
 if [ $score -eq 120 ];
 then
 	echo ">> Lab 3 OK"
 else
 	echo "Total score: "$score
 fi
+

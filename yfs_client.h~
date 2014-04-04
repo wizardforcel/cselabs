@@ -2,7 +2,7 @@
 #define yfs_client_h
 
 #include <string>
-
+//#include "yfs_protocol.h"
 #include "extent_client.h"
 #include <vector>
 #include <map>
@@ -43,7 +43,8 @@ class yfs_client {
   
 
  public:
-  yfs_client(std::string);
+  yfs_client();
+  yfs_client(std::string, std::string);
 
   bool isfile(inum);
   bool isdir(inum);
@@ -60,7 +61,7 @@ class yfs_client {
   int read(inum, size_t, off_t, std::string &);
   int unlink(inum,const char *);
   int mkdir(inum , const char *, mode_t , inum &);
-  int symlink(inum, const char *, const char *, inum &);
+  int symlink(inum, const string &, inum &);
   int readlink(inum, string &);
   
   /** you may need to add symbolic link related methods here.*/

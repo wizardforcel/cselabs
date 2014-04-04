@@ -372,7 +372,6 @@ inode_manager::getattr(uint32_t inum, extent_protocol::attr &a)
     delete ino;
     return;
   }
-  ino->atime = time(0);
 
   a.type = ino->type;
   a.size = ino->size;
