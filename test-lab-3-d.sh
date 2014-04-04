@@ -38,4 +38,3 @@ then
 fi
 
 echo "Passed SYMLINK TEST"
-

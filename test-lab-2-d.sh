@@ -37,4 +37,8 @@ then
     exit
 fi
 
+<<<<<<< HEAD
 echo "Passed SYMLINK TEST"
+=======
+echo "Passed SYMLINK TEST"
+>>>>>>> 8ab282e31f601011eef3476057e48b27770c7041
