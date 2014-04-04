@@ -64,7 +64,7 @@ class block_manager {
 // Block containing bit for block b
 #define BBLOCK(b) ((b)/BPB + 2)
 
-#define NDIRECT 32
+#define NDIRECT 100
 #define NINDIRECT (BLOCK_SIZE / sizeof(uint))
 #define MAXFILE (NDIRECT + NINDIRECT)
 
@@ -77,6 +77,7 @@ typedef struct inode {
   unsigned int bnum;
   blockid_t blocks[NDIRECT];   // Data block addresses
   blockid_t indirblock;
+  inode()
 } inode_t;
 
 class inode_manager {
