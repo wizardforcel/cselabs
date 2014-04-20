@@ -185,7 +185,6 @@ inode_manager::free_inode(uint32_t inum)
    * note: you need to check if the inode is already a freed one;
    * if not, clear it, and remember to write back to disk.
    */
-
   struct inode *ino = get_inode(inum);
   if(ino == 0) return;
   if(ino->type == extent_protocol::T_FREE)
@@ -193,12 +192,10 @@ inode_manager::free_inode(uint32_t inum)
     delete ino;
     return;
   }
-
-  remove_file(inum);
+  
   bzero(ino, sizeof(inode));
   put_inode(inum, ino);  
   delete ino;
-  return;
 }
 
 
@@ -290,7 +287,6 @@ inode_manager::read_file(uint32_t inum, char **buf_out, int *size)
   *buf_out = buf;
   *size = ino->size;
   delete ino;
-  return;
 }
 
 /* alloc/free blocks if needed */
@@ -353,7 +349,6 @@ inode_manager::write_file(uint32_t inum, const char *buf, int size)
   ino->size = size;
   put_inode(inum, ino);
   delete ino;
-  return;
 }
 
 void
@@ -381,7 +376,6 @@ inode_manager::getattr(uint32_t inum, extent_protocol::attr &a)
   a.mtime = ino->mtime;
 
   delete ino;
-  return;
 }
 
 void
@@ -393,10 +387,18 @@ inode_manager::remove_file(uint32_t inum)
    */
 
   struct inode *ino = get_inode(inum);
+  if(ino == 0) return;
+  if(ino->type == extent_protocol::T_FREE)
+  {
+    delete ino;
+    return;
+  }
+
   for(int i = 0; i < ino->bnum; i++)
   {
     bm->free_block(getblockid(ino, i));
   }
   bm->free_block(ino->indirblock);
   delete ino;
+  free_inode(inum);
 }
