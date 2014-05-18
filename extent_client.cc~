@@ -61,7 +61,7 @@ extent_client::remove(extent_protocol::extentid_t eid)
   extent_protocol::status ret = extent_protocol::OK;
   // Your lab3 code goes here
   int res;
-  ret = cl->call(extent_protocol::remove, eid, res);
+  ret = cl->call(extent_protocol::remove, eid, int());
   return ret;
 }
 
