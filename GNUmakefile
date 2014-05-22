@@ -1,4 +1,4 @@
-LAB=6
+LAB=7
 SOL=0
 RPC=./rpc
 LAB1GE=$(shell expr $(LAB) \>\= 1)
@@ -16,6 +16,10 @@ ifeq ($(shell getconf LONG_BIT),64)
 	RPCLIB= librpc64.a
 else
 	RPCLIB= librpc86.a
+endif
+
+ifeq ($(LAB7GE),1)
+	RPCLIB= librpc.a
 endif
 
 ifeq ($(shell uname -s),Darwin)
@@ -48,6 +52,7 @@ lab3: yfs_client extent_server test-lab-3-g
 lab4: lock_server lock_tester lock_demo yfs_client extent_server test-lab-4-a test-lab-4-b
 lab5: yfs_client extent_server lock_server lock_tester test-lab-5-a	test-lab-5-b
 lab6: yfs_client extent_server lock_server lock_tester test-lab-6-a test-lab-6-b
+lab7: rpc/rpctest yfs_client extent_server lock_server lock_tester test-lab-6-a test-lab-6-b
 
 hfiles1=rpc/fifo.h rpc/connection.h rpc/rpc.h rpc/marshall.h rpc/method_thread.h\
 	rpc/thr_pool.h rpc/pollmgr.h rpc/jsl_log.h rpc/slock.h rpc/rpctest.cc\
@@ -58,6 +63,12 @@ hfiles3=lock_client_cache.h lock_server_cache.h handle.h tprintf.h
 hfiles4=log.h rsm.h rsm_protocol.h config.h paxos.h paxos_protocol.h rsm_state_transfer.h rsmtest_client.h tprintf.h
 hfiles5=rsm_state_transfer.h rsm_client.h
 rsm_files = rsm.cc paxos.cc config.cc log.cc handle.cc
+
+rpclib=rpc/rpc.cc rpc/connection.cc rpc/pollmgr.cc rpc/thr_pool.cc rpc/jsl_log.cc gettime.cc
+rpc/librpc.a: $(patsubst %.cc,%.o,$(rpclib))
+	rm -f $@
+	ar cq $@ $^
+	ranlib rpc/librpc.a
 
 rpc/rpctest=rpc/rpctest.cc
 rpc/rpctest: $(patsubst %.cc,%.o,$(rpctest)) rpc/$(RPCLIB)
