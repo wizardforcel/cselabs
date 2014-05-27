@@ -104,7 +104,6 @@ extent_client_cache::modify_attr_put(extent_protocol::extentid_t eid, size_t sz,
   a.atime = a.ctime = a.mtime = tm;
   a.size = sz;
   cache_attr[eid] = a;
-  return ret;
 }
 
 extent_protocol::status
