@@ -16,7 +16,7 @@ using namespace std;
 int lock_client_cache::last_port = 0;
 
 lock_client_cache::lock_client_cache(std::string xdst, 
-				     class lock_release_user *_lu)
+				     i_lock_release_user *_lu)
   : lock_client(xdst), lu(_lu)
 {
   srand(time(NULL)^last_port);
@@ -72,7 +72,8 @@ lock_client_cache::acquire(lock_protocol::lockid_t lid)
       ret = cl->call(lock_protocol::acquire, lid, id, r);
       if(ret == lock_protocol::OK)
       {
-        printf("[%s] request lock:%u res:%u nd_return:%u\n", id.c_str(), int(lid), int(ret), r);
+        //printf("[%s] request lock:%u res:%u nd_return:%u\n",
+        //       id.c_str(), int(lid), int(ret), r);
         info.status = OCCUPY;
         info.nd_return = (r == 1);
       }
@@ -80,7 +81,7 @@ lock_client_cache::acquire(lock_protocol::lockid_t lid)
     }
     else if(info.status == AVAIL)
     {
-      printf("[%s] acquire lock:%u\n", id.c_str(), int(lid));
+      //printf("[%s] acquire lock:%u\n", id.c_str(), int(lid));
       info.status = OCCUPY;
       lc_map[lid] = info;
       ret = lock_protocol::OK;
@@ -102,7 +103,7 @@ lock_client_cache::release(lock_protocol::lockid_t lid)
   info.last_release = time(0);
   lc_map[lid] = info;
   pthread_mutex_unlock(&lc_mutex);
-  printf("[%s] release lock:%u\n", id.c_str(), int(lid));
+  //printf("[%s] release lock:%u\n", id.c_str(), int(lid));
   return lock_protocol::OK;
 }
 
@@ -128,7 +129,7 @@ lock_client_cache::retry_handler(lock_protocol::lockid_t lid,
   info.nd_return = (nd_return == 1);
   lc_map[lid] = info;
   pthread_mutex_unlock(&lc_mutex);
-  printf("[%s] retry lock:%u nd_return:%u\n", id.c_str(), int(lid), nd_return);
+  //printf("[%s] retry lock:%u nd_return:%u\n", id.c_str(), int(lid), nd_return);
   return rlock_protocol::OK;
 }
 
@@ -150,7 +151,8 @@ void *lock_client_cache::thread_func(void *data)
       {
         it->second.status = OCCUPY;
         nd_release.push_back(it->first);
-        printf("[%s] recycle lock:%u\n", p->id.c_str(), int(it->first));
+        //printf("[%s] recycle lock:%u\n",
+        //       p->id.c_str(), int(it->first));
       }
     }
     pthread_mutex_unlock(&(p->lc_mutex));
@@ -159,8 +161,9 @@ void *lock_client_cache::thread_func(void *data)
         = nd_release.begin(); it != nd_release.end(); ++it)
     {
       int r;
+      p->call_do_release(*it);
       p->cl->call(lock_protocol::release, *it, p->id, r);
-      printf("[%s] return lock:%u\n", p->id.c_str(), int(*it));
+      //printf("[%s] do release:%u\n", p->id.c_str(), int(*it));
       pthread_mutex_lock(&(p->lc_mutex));
       p->lc_map[*it].status = UNALLOC;
       p->lc_map[*it].nd_return = 0;

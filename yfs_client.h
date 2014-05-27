@@ -15,7 +15,7 @@ using std::map;
 using std::vector;
 
 class yfs_client {
-  extent_client *ec;
+  extent_client_cache *ec;
   lock_client_cache *lc;
  public:
 

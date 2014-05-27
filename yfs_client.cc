@@ -13,8 +13,8 @@ using namespace std;
 
 yfs_client::yfs_client(std::string extent_dst, std::string lock_dst)
 {
-  ec = new extent_client(extent_dst);
-  lc = new lock_client_cache(lock_dst);
+  ec = new extent_client_cache(extent_dst);
+  lc = new lock_client_cache(lock_dst, new lock_release_user(ec));
   if (ec->put(1, "") != extent_protocol::OK)
       printf("error init root dir\n"); // XYB: init root dir
 }
