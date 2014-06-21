@@ -1,5 +1,6 @@
 *.o
 *.d
+*~
 lab1_tester
 yfs_client1.log
 yfs_client2.log

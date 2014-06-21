@@ -74,6 +74,8 @@
 #include "gettime.h"
 #include "lang/verify.h"
 
+using namespace std;
+
 const rpcc::TO rpcc::to_max = { 120000 };
 const rpcc::TO rpcc::to_min = { 1000 };
 
@@ -667,7 +669,49 @@ rpcs::checkduplicate_and_update(unsigned int clt_nonce, unsigned int xid,
     ScopedLock rwl(&reply_window_m_);
 	
     // Your lab7 code goes here
+    jsl_log(JSL_DBG_2, "rpcs::checkduplicate_and_update: xid:%u, clt:%u\n", 
+            xid, clt_nonce);
+    list<reply_t> *lst = &reply_window_[clt_nonce];
 
+    //if xid exist then cb_present? DONE: INPROGRESS
+    for(list<reply_t>::iterator it
+          = lst->begin(); it != lst->end(); ++it)
+    {
+        if(it->xid == xid)
+        {
+            if(it->cb_present)
+            {
+                *b = it->buf;
+                *sz = it->sz;
+                return DONE;
+            }
+            else return INPROGRESS;
+        }
+    }
+
+    //if xid < all then forgotton
+    if(!lst->empty() && lst->front().xid > xid)
+        return FORGOTTEN;
+
+    //del which xid < xid_rep
+    list<reply_t>::iterator it;
+    for(it = lst->begin(); it != lst->end(); ++it)
+    {
+        if(it->xid >= xid_rep)
+            break;
+    }
+    lst->erase(lst->begin(), it);
+
+    //insert current
+    reply_t reply(xid);
+    reply.cb_present = false;
+    for(it = lst->begin(); it != lst->end(); ++it)
+    {
+        if(it->xid > xid)
+            break;
+    }
+    lst->insert(it, reply);
+    return NEW;    
 }
 
 // rpcs::dispatch calls add_reply when it is sending a reply to an RPC,
@@ -681,6 +725,18 @@ rpcs::add_reply(unsigned int clt_nonce, unsigned int xid, char *b, int sz)
     ScopedLock rwl(&reply_window_m_);
 
     // Your lab7 code goes here
+    list<reply_t> *lst = &reply_window_[clt_nonce];
+    for(list<reply_t>::iterator it
+          = lst->begin(); it != lst->end(); ++it)
+    {
+        if(it->xid == xid)
+        {
+            it->buf = b;
+            it->sz = sz;
+            it->cb_present = true;
+            break;
+        }
+    }
 }
 
 void
@@ -775,6 +831,8 @@ operator<<(marshall &m, unsigned int x)
 {
 	// network order is big-endian
         // lab7: write marshall code for unsigned int type here
+        m << (unsigned short) (x >> 16);
+        m << (unsigned short) x;
 	return m;
 }
 
@@ -893,6 +951,10 @@ unmarshall &
 operator>>(unmarshall &u, unsigned int &x)
 {
         // lab7: write marshall code for unsigned int type here
+        x = (u.rawbyte() & 0xff) << 24;
+	x |= (u.rawbyte() & 0xff) << 16;
+	x |= (u.rawbyte() & 0xff) << 8;
+	x |= u.rawbyte() & 0xff;
 	return u;
 }
 
